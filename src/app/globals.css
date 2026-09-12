@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-heading: var(--font-jakarta), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
+  
+  --color-vestra-black: #0a0a0a;
+  --color-vestra-dark-gray: #374151;
+  --color-vestra-medium-gray: #6b7280;
+  --color-vestra-light-gray: #f8fafc;
+  --color-vestra-white: #ffffff;
+  --color-vestra-primary: #1d4ed8;
+  --color-vestra-secondary: #3b82f6;
+  --color-vestra-border: #e5e7eb;
+}
+
+:root {
+  --background: var(--color-vestra-white);
+  --foreground: var(--color-vestra-dark-gray);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--color-vestra-black);
+}
+
+/* Base utility for smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.33%); }
+}
