@@ -43,7 +43,7 @@ function RegisterForm() {
     try {
       setLoading(true);
       await register(email, password, fullName, refCode);
-      router.push("/dashboard");
+      router.push("/verify-email");
     } catch (err: unknown) {
       console.error("Firebase registration error:", err);
       const firebaseErr = err as { code?: string, message?: string };

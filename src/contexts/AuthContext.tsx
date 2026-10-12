@@ -10,6 +10,7 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   updatePassword,
+  sendEmailVerification,
   UserCredential
 } from "firebase/auth";
 import { doc, setDoc, onSnapshot, serverTimestamp, DocumentData } from "firebase/firestore";
@@ -24,6 +25,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   changePassword: (newPassword: string) => Promise<void>;
+  sendVerificationEmail: () => Promise<void>;
+  reloadUser: () => Promise<void>;
   is2faVerified: boolean;
   setIs2faVerified: (val: boolean) => void;
 }
@@ -96,6 +99,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       createdAt: serverTimestamp(),
     });
 
+    // Automatically send verification email
+    try {
+      await sendEmailVerification(currentUser);
+    } catch (emailErr) {
+      console.warn("Could not send verification email on registration:", emailErr);
+    }
+
     return userCredential;
   };
 
@@ -113,8 +123,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return updatePassword(auth.currentUser, newPassword);
   };
 
+  const sendVerificationEmail = async () => {
+    if (!auth.currentUser) throw new Error("No user signed in.");
+    await sendEmailVerification(auth.currentUser);
+  };
+
+  const reloadUser = async () => {
+    if (auth.currentUser) {
+      await auth.currentUser.reload();
+      setUser(auth.currentUser);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, userData, loading, login, register, logout, resetPassword, changePassword, is2faVerified, setIs2faVerified }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      userData, 
+      loading, 
+      login, 
+      register, 
+      logout, 
+      resetPassword, 
+      changePassword, 
+      sendVerificationEmail, 
+      reloadUser, 
+      is2faVerified, 
+      setIs2faVerified 
+    }}>
       {children}
     </AuthContext.Provider>
   );
