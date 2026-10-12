@@ -56,8 +56,13 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid || isAdmin()
       );
       
-      // For now, only admins (or a backend function) create/update/delete investments
-      allow create, update, delete: if isAdmin();
+      // Users can create investments for themselves, admins can create for anyone
+      allow create: if isAuth() && (
+        request.resource.data.userId == request.auth.uid || isAdmin()
+      );
+      
+      // Only admins can update or delete investments
+      allow update, delete: if isAdmin();
     }
 
     // 2FA Codes collection

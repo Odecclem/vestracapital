@@ -9,9 +9,17 @@ export default function InvestmentPlans() {
     {
       name: "Basic Plan",
       minDeposit: "$100",
-      maxDeposit: "$999",
+      maxDeposit: "$499",
       roi: "25%",
       duration: "7 days",
+      popular: false,
+    },
+    {
+      name: "Standard Plan",
+      minDeposit: "$500",
+      maxDeposit: "$999",
+      roi: "45%",
+      duration: "10 days",
       popular: false,
     },
     {
@@ -56,7 +64,7 @@ export default function InvestmentPlans() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((plan, index) => (
             <motion.div
               key={plan.name}

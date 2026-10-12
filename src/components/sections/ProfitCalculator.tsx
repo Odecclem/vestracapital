@@ -20,10 +20,19 @@ const CALCULATOR_PLANS: PlanConfig[] = [
     id: "basic",
     name: "Basic Plan",
     min: 100,
-    max: 999,
+    max: 499,
     roiPercentage: 25,
     durationDays: 7,
-    tag: "Low Entry",
+    tag: "Starter",
+  },
+  {
+    id: "standard",
+    name: "Standard Plan",
+    min: 500,
+    max: 999,
+    roiPercentage: 45,
+    durationDays: 10,
+    tag: "$500 Tier",
   },
   {
     id: "pro",
@@ -46,8 +55,8 @@ const CALCULATOR_PLANS: PlanConfig[] = [
 ];
 
 export default function ProfitCalculator() {
-  const [selectedPlan, setSelectedPlan] = useState<PlanConfig>(CALCULATOR_PLANS[1]); // Default to Pro
-  const [amount, setAmount] = useState<number>(1500);
+  const [selectedPlan, setSelectedPlan] = useState<PlanConfig>(CALCULATOR_PLANS[1]); // Default to Standard ($500)
+  const [amount, setAmount] = useState<number>(500);
 
   const handlePlanChange = (plan: PlanConfig) => {
     setSelectedPlan(plan);
@@ -107,7 +116,7 @@ export default function ProfitCalculator() {
           className="max-w-5xl mx-auto bg-white rounded-3xl border border-gray-200 shadow-[0_12px_40px_rgba(0,0,0,0.06)] overflow-hidden"
         >
           {/* Plan Selector Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-3 p-3 bg-gray-50/80 border-b border-gray-200 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 p-3 bg-gray-50/80 border-b border-gray-200 gap-2">
             {CALCULATOR_PLANS.map((plan) => {
               const isSelected = selectedPlan.id === plan.id;
               return (
