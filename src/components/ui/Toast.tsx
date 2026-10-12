@@ -3,9 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { CheckCircle2, XCircle, AlertCircle, X } from "lucide-react";
 
-type ToastType = "success" | "error" | "warning";
+export type ToastType = "success" | "error" | "warning";
 
-interface ToastProps {
+export interface ToastState {
+  isOpen: boolean;
+  message: string;
+  type: ToastType;
+}
+
+export interface ToastProps {
   message: string;
   type?: ToastType;
   duration?: number;

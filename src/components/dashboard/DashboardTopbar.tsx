@@ -56,7 +56,9 @@ export default function DashboardTopbar({ onMenuClick }: DashboardTopbarProps) {
             <span className="text-sm font-medium text-[#0a0a0a] leading-tight max-w-[140px] truncate flex items-center gap-1">
               {user?.displayName || "User"}
               {userData?.kycStatus === "verified" && (
-                <ShieldCheck className="h-4 w-4 text-green-500 shrink-0" title="Verified Account" />
+                <span title="Verified Account" className="inline-flex items-center">
+                  <ShieldCheck className="h-4 w-4 text-green-500 shrink-0" />
+                </span>
               )}
             </span>
             <span className="text-xs text-[#6b7280] leading-tight max-w-[140px] truncate">
