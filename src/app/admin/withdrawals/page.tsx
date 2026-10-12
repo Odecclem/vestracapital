@@ -30,13 +30,18 @@ export default function PendingWithdrawalsPage() {
       try {
         const q = query(
           collection(db, "transactions"),
-          where("type", "==", "withdrawal"),
-          where("status", "==", "pending"),
-          orderBy("createdAt", "desc")
+          where("type", "==", "withdrawal")
         );
         const snapshot = await getDocs(q);
         const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as TransactionData[];
-        setWithdrawals(list);
+        const pendingWithdrawals = list
+          .filter(tx => tx.status === "pending")
+          .sort((a, b) => {
+            const timeA = a.createdAt?.seconds || 0;
+            const timeB = b.createdAt?.seconds || 0;
+            return timeB - timeA;
+          });
+        setWithdrawals(pendingWithdrawals);
       } catch (error) {
         console.error("Error fetching withdrawals:", error);
         setToast({ isOpen: true, message: "Failed to load pending withdrawals.", type: "error" });

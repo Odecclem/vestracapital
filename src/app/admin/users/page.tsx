@@ -73,6 +73,21 @@ export default function ManageUsersPage() {
     }
   };
 
+  const handleToggleAdmin = async (targetUser: UserData) => {
+    const newRole = targetUser.role === "admin" ? "user" : "admin";
+    if (!confirm(`Are you sure you want to change ${targetUser.fullName}'s role to "${newRole}"?`)) return;
+
+    try {
+      const userRef = doc(db, "users", targetUser.id);
+      await updateDoc(userRef, { role: newRole });
+      setUsers(users.map(u => u.id === targetUser.id ? { ...u, role: newRole } : u));
+      setToast({ isOpen: true, message: `Role changed to ${newRole}.`, type: "success" });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to update role.";
+      setToast({ isOpen: true, message: msg, type: "error" });
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -140,7 +155,17 @@ export default function ManageUsersPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-gray-500">{formatDate(u.createdAt)}</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right space-x-3">
+                    <button
+                      onClick={() => handleToggleAdmin(u)}
+                      className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded transition-colors ${
+                        u.role === 'admin'
+                          ? 'text-red-600 hover:bg-red-50'
+                          : 'text-purple-600 hover:bg-purple-50'
+                      }`}
+                    >
+                      {u.role === 'admin' ? 'Demote to User' : 'Make Admin'}
+                    </button>
                     <button
                       onClick={() => {
                         setEditingUser(u);
