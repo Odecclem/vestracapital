@@ -89,11 +89,11 @@ export default function DashboardOverview() {
 
     const fetchData = async () => {
       const now = Math.floor(Date.now() / 1000);
-      try {
-        let currentTotalInvested = 0;
-        let explicitActivePlans: number | undefined = undefined;
+      let currentTotalInvested = 0;
+      let explicitActivePlans: number | undefined = undefined;
 
-        // Fetch user document
+      // 1. Fetch user document
+      try {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
@@ -109,22 +109,33 @@ export default function DashboardOverview() {
             createdAt: data.createdAt,
           });
         }
+      } catch (userErr) {
+        console.error("Error fetching userDoc:", userErr);
+      }
 
-        // Fetch recent transactions
+      // 2. Fetch recent transactions safely (sort in JS to prevent Firestore index requirements)
+      try {
         const txQuery = query(
           collection(db, "transactions"),
-          where("userId", "==", user.uid),
-          orderBy("createdAt", "desc"),
-          limit(5)
+          where("userId", "==", user.uid)
         );
         const txSnapshot = await getDocs(txQuery);
         const txList: Transaction[] = txSnapshot.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         })) as Transaction[];
-        setTransactions(txList);
+        txList.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeB - timeA;
+        });
+        setTransactions(txList.slice(0, 5));
+      } catch (txErr) {
+        console.warn("Transactions query fallback:", txErr);
+      }
 
-        // Fetch all investments for this user
+      // 3. Fetch all investments for this user
+      try {
         const invQuery = query(
           collection(db, "investments"),
           where("userId", "==", user.uid)
@@ -158,7 +169,7 @@ export default function DashboardOverview() {
             const elapsed = now - start.seconds;
             progress = total <= 0 ? 100 : Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
           } else {
-            progress = rawStatus === "completed" ? 100 : 35;
+            progress = rawStatus === "completed" ? 100 : 25;
           }
 
           return {
@@ -174,11 +185,11 @@ export default function DashboardOverview() {
           } as Investment;
         });
 
-        // Filter active investments (status is not completed)
+        // Filter active investments
         let activeList = rawList.filter((inv) => inv.status === "active");
 
         // If user has capital invested (e.g. $13,000) but no individual investment record exists yet,
-        // create their active portfolio allocation card
+        // create their active portfolio allocation card so the section shows their live investment
         if (activeList.length === 0 && currentTotalInvested > 0) {
           const planTier =
             currentTotalInvested >= 5000
@@ -189,7 +200,7 @@ export default function DashboardOverview() {
               ? { name: "Standard Plan Contract", roi: 45, days: 10 }
               : { name: "Basic Plan Contract", roi: 25, days: 7 };
 
-          const startSecs = now - 86400 * 3; // 3 days ago
+          const startSecs = now - 86400 * 3; // 3 days active
           const endSecs = startSecs + planTier.days * 86400;
           const totalSecs = endSecs - startSecs;
           const elapsedSecs = Math.max(0, now - startSecs);
@@ -210,7 +221,7 @@ export default function DashboardOverview() {
           ];
         }
 
-        // Determine real active plans count (never display 0 if user has active investments or capital invested)
+        // Determine real active plans count (NEVER 0 if user has active investments or capital invested!)
         let count = activeList.length;
         if (count === 0 && explicitActivePlans !== undefined && explicitActivePlans > 0) {
           count = explicitActivePlans;
@@ -230,7 +241,7 @@ export default function DashboardOverview() {
 
         // Set state
         setInvestments(activeList);
-        setActivePlansCount(count);
+        setActivePlansCount(Math.max(count, currentTotalInvested > 0 ? 1 : 0));
         setUserData((prev) => {
           if (!prev) return null;
           return {
@@ -238,8 +249,8 @@ export default function DashboardOverview() {
             totalProfit: (prev.totalProfit && prev.totalProfit > 0) ? prev.totalProfit : dynamicAccruedProfit,
           };
         });
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+      } catch (invErr) {
+        console.error("Error fetching investments:", invErr);
       } finally {
         setLoading(false);
       }
