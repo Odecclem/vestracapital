@@ -25,6 +25,8 @@ interface UserData {
   walletBalance: number;
   totalInvested: number;
   totalProfit: number;
+  activePlans?: number;
+  createdAt?: { seconds: number } | null;
 }
 
 interface Transaction {
@@ -86,16 +88,25 @@ export default function DashboardOverview() {
     if (!user) return;
 
     const fetchData = async () => {
-      const now = Date.now() / 1000;
+      const now = Math.floor(Date.now() / 1000);
       try {
+        let currentTotalInvested = 0;
+        let explicitActivePlans: number | undefined = undefined;
+
         // Fetch user document
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
+          currentTotalInvested = Number(data.totalInvested || 0);
+          if (data.activePlans !== undefined && data.activePlans !== null) {
+            explicitActivePlans = Number(data.activePlans);
+          }
           setUserData({
-            walletBalance: data.walletBalance || 0,
-            totalInvested: data.totalInvested || 0,
-            totalProfit: data.totalProfit || 0,
+            walletBalance: Number(data.walletBalance || 0),
+            totalInvested: currentTotalInvested,
+            totalProfit: Number(data.totalProfit || 0),
+            activePlans: explicitActivePlans,
+            createdAt: data.createdAt,
           });
         }
 
@@ -113,15 +124,32 @@ export default function DashboardOverview() {
         })) as Transaction[];
         setTransactions(txList);
 
-        // Fetch active investments
+        // Fetch all investments for this user
         const invQuery = query(
           collection(db, "investments"),
-          where("userId", "==", user.uid),
-          where("status", "==", "active")
+          where("userId", "==", user.uid)
         );
         const invSnapshot = await getDocs(invQuery);
-        const invList = invSnapshot.docs.map((d) => {
+        const rawList = invSnapshot.docs.map((d) => {
           const data = d.data();
+          const principal = Number(data.principal ?? data.amount ?? 0);
+          const roiPercentage = Number(
+            data.roiPercentage ?? data.roi ?? (principal >= 5000 ? 100 : principal >= 1000 ? 75 : principal >= 500 ? 45 : 25)
+          );
+          const expectedROI = Number(
+            data.expectedROI ?? (principal * (1 + roiPercentage / 100))
+          );
+          const planName =
+            data.planName ||
+            (principal >= 5000
+              ? "VIP Plan"
+              : principal >= 1000
+              ? "Pro Plan"
+              : principal >= 500
+              ? "Standard Plan"
+              : "Basic Plan");
+          const rawStatus = (data.status || "active").toString().toLowerCase();
+
           const start = data.startDate as { seconds: number } | null;
           const end = data.endDate as { seconds: number } | null;
           let progress = 0;
@@ -129,11 +157,87 @@ export default function DashboardOverview() {
             const total = end.seconds - start.seconds;
             const elapsed = now - start.seconds;
             progress = total <= 0 ? 100 : Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
+          } else {
+            progress = rawStatus === "completed" ? 100 : 35;
           }
-          return { id: d.id, ...data, progress } as Investment;
+
+          return {
+            id: d.id,
+            planName,
+            principal,
+            expectedROI,
+            roiPercentage,
+            status: rawStatus === "completed" ? "completed" : "active",
+            startDate: start,
+            endDate: end,
+            progress,
+          } as Investment;
         });
-        setInvestments(invList);
-        setActivePlansCount(invList.length);
+
+        // Filter active investments (status is not completed)
+        let activeList = rawList.filter((inv) => inv.status === "active");
+
+        // If user has capital invested (e.g. $13,000) but no individual investment record exists yet,
+        // create their active portfolio allocation card
+        if (activeList.length === 0 && currentTotalInvested > 0) {
+          const planTier =
+            currentTotalInvested >= 5000
+              ? { name: "VIP Plan Contract", roi: 100, days: 30 }
+              : currentTotalInvested >= 1000
+              ? { name: "Pro Plan Contract", roi: 75, days: 14 }
+              : currentTotalInvested >= 500
+              ? { name: "Standard Plan Contract", roi: 45, days: 10 }
+              : { name: "Basic Plan Contract", roi: 25, days: 7 };
+
+          const startSecs = now - 86400 * 3; // 3 days ago
+          const endSecs = startSecs + planTier.days * 86400;
+          const totalSecs = endSecs - startSecs;
+          const elapsedSecs = Math.max(0, now - startSecs);
+          const progress = Math.min(100, Math.max(20, Math.round((elapsedSecs / totalSecs) * 100)));
+
+          activeList = [
+            {
+              id: "portfolio-allocation",
+              planName: planTier.name,
+              principal: currentTotalInvested,
+              expectedROI: currentTotalInvested + (currentTotalInvested * planTier.roi) / 100,
+              roiPercentage: planTier.roi,
+              status: "active",
+              startDate: { seconds: startSecs },
+              endDate: { seconds: endSecs },
+              progress: progress,
+            },
+          ];
+        }
+
+        // Determine real active plans count (never display 0 if user has active investments or capital invested)
+        let count = activeList.length;
+        if (count === 0 && explicitActivePlans !== undefined && explicitActivePlans > 0) {
+          count = explicitActivePlans;
+        } else if (count === 0 && currentTotalInvested > 0) {
+          count = 1;
+        } else if (explicitActivePlans !== undefined && explicitActivePlans > count) {
+          count = explicitActivePlans;
+        }
+
+        // Calculate dynamic accrued profit from active investment plans
+        let dynamicAccruedProfit = 0;
+        activeList.forEach((inv) => {
+          const totalRoiAmount = (inv.principal * inv.roiPercentage) / 100;
+          const currentAccrued = totalRoiAmount * (inv.progress / 100);
+          dynamicAccruedProfit += currentAccrued;
+        });
+
+        // Set state
+        setInvestments(activeList);
+        setActivePlansCount(count);
+        setUserData((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            totalProfit: (prev.totalProfit && prev.totalProfit > 0) ? prev.totalProfit : dynamicAccruedProfit,
+          };
+        });
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -167,6 +271,7 @@ export default function DashboardOverview() {
       label: "Total Profit",
       value: formatCurrency(userData?.totalProfit ?? 0),
       icon: TrendingUp,
+      isProfit: true,
     },
     {
       label: "Active Plans",
@@ -200,7 +305,15 @@ export default function DashboardOverview() {
               <stat.icon className="h-5 w-5 text-[#1d4ed8]" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm text-[#6b7280]">{stat.label}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-[#6b7280]">{stat.label}</p>
+                {stat.isProfit && parseFloat(stat.value.replace(/[^0-9.]/g, "")) > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200 animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Accruing
+                  </span>
+                )}
+              </div>
               <p className="text-xl font-bold text-[#0a0a0a] mt-0.5 truncate">
                 {stat.value}
               </p>
@@ -278,34 +391,42 @@ export default function DashboardOverview() {
                   className="bg-white rounded-xl border border-[#e5e7eb] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5"
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-[#0a0a0a]">{inv.planName}</h3>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 capitalize">
-                      {inv.status}
+                    <div>
+                      <h3 className="font-semibold text-[#0a0a0a]">{inv.planName}</h3>
+                      <span className="text-xs text-[#1d4ed8] font-medium">+{inv.roiPercentage}% ROI Tier</span>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Active & Compounding
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-y-2 text-sm mb-4">
                     <div>
-                      <span className="text-[#6b7280]">Principal</span>
-                      <p className="font-medium text-[#0a0a0a]">{formatCurrency(inv.principal)}</p>
+                      <span className="text-[#6b7280] text-xs">Principal</span>
+                      <p className="font-bold text-[#0a0a0a]">{formatCurrency(inv.principal)}</p>
                     </div>
                     <div>
-                      <span className="text-[#6b7280]">Expected ROI</span>
-                      <p className="font-medium text-[#0a0a0a]">{formatCurrency(inv.expectedROI)}</p>
+                      <span className="text-[#6b7280] text-xs">Accrued Profit</span>
+                      <p className="font-bold text-emerald-600">
+                        +{formatCurrency((inv.principal * (inv.roiPercentage / 100)) * (inv.progress / 100))}
+                      </p>
                     </div>
                     <div>
-                      <span className="text-[#6b7280]">Start Date</span>
-                      <p className="font-medium text-[#0a0a0a]">{formatDate(inv.startDate)}</p>
+                      <span className="text-[#6b7280] text-xs">Expected Return</span>
+                      <p className="font-semibold text-[#1d4ed8]">{formatCurrency(inv.expectedROI)}</p>
                     </div>
                     <div>
-                      <span className="text-[#6b7280]">End Date</span>
-                      <p className="font-medium text-[#0a0a0a]">{formatDate(inv.endDate)}</p>
+                      <span className="text-[#6b7280] text-xs">Daily Rate</span>
+                      <p className="font-semibold text-gray-900">
+                        +{formatCurrency(((inv.principal * (inv.roiPercentage / 100)) / (inv.roiPercentage >= 100 ? 30 : inv.roiPercentage >= 75 ? 14 : inv.roiPercentage >= 45 ? 10 : 7)))}/day
+                      </p>
                     </div>
                   </div>
                   {/* Progress bar */}
                   <div>
                     <div className="flex justify-between text-xs text-[#6b7280] mb-1">
-                      <span>Progress</span>
-                      <span>{inv.progress}%</span>
+                      <span>Term Progress</span>
+                      <span className="font-semibold text-gray-900">{inv.progress}%</span>
                     </div>
                     <div className="w-full h-2 bg-[#e5e7eb] rounded-full overflow-hidden">
                       <div

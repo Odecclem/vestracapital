@@ -14,6 +14,7 @@ import {
   X,
   Users,
   UserCircle,
+  Bell,
 } from "lucide-react";
 
 const navItems = [
@@ -24,6 +25,7 @@ const navItems = [
   { name: "Copy Trading", href: "/dashboard/copy-trading", icon: Users },
   { name: "My Investments", href: "/dashboard/investments", icon: History },
   { name: "Transactions", href: "/dashboard/transactions", icon: History },
+  { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
   { name: "Referrals", href: "/dashboard/referrals", icon: Users },
   { name: "Profile", href: "/dashboard/profile", icon: UserCircle },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },

@@ -5,6 +5,7 @@ import { db } from "@/lib/firebase/config";
 import { collection, getDocs, doc, query, where, orderBy, writeBatch, increment } from "firebase/firestore";
 import { ArrowDownToLine, Loader2, Check, X as XIcon } from "lucide-react";
 import Toast, { ToastState } from "@/components/ui/Toast";
+import { createNotification } from "@/lib/firebase/notifications";
 
 interface TransactionData {
   id: string;
@@ -74,6 +75,15 @@ export default function PendingDepositsPage() {
       });
       
       await batch.commit();
+
+      // Send notification to user
+      await createNotification({
+        userId: tx.userId,
+        title: "Deposit Approved",
+        message: `Your deposit of $${tx.amount.toLocaleString()} has been approved and added to your wallet balance.`,
+        type: "deposit",
+        link: "/dashboard",
+      });
       
       // Remove from list
       setDeposits(deposits.filter(d => d.id !== tx.id));
@@ -99,6 +109,15 @@ export default function PendingDepositsPage() {
       batch.update(txRef, { status: "rejected" });
       
       await batch.commit();
+
+      // Send notification to user
+      await createNotification({
+        userId: tx.userId,
+        title: "Deposit Rejected",
+        message: `Your deposit request of $${tx.amount.toLocaleString()} was rejected. Please contact support or retry.`,
+        type: "deposit",
+        link: "/dashboard/transactions",
+      });
       
       // Remove from list
       setDeposits(deposits.filter(d => d.id !== tx.id));

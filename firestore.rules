@@ -69,5 +69,13 @@ service cloud.firestore {
     match /2fa_codes/{userId} {
       allow read, create, update, delete: if isAuth() && request.auth.uid == userId;
     }
+
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can read, update (mark as read), and delete their own notifications; admins can access all
+      allow read: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
   }
 }

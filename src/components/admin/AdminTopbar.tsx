@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { Menu, Bell, Shield, LogOut } from "lucide-react";
+import { Menu, Shield, LogOut } from "lucide-react";
+import NotificationDropdown from "@/components/dashboard/NotificationDropdown";
 import { useRouter } from "next/navigation";
 
 interface AdminTopbarProps {
@@ -39,9 +40,7 @@ export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
-        <button className="relative p-2 text-[#6b7280] hover:text-[#1d4ed8] hover:bg-[#f8fafc] rounded-lg transition-colors">
-          <Bell className="h-5 w-5" />
-        </button>
+        <NotificationDropdown />
 
         <div className="w-px h-8 bg-[#e5e7eb]" />
 

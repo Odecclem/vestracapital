@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase/config";
 import { doc, collection, writeBatch, serverTimestamp, increment } from "firebase/firestore";
 import { TrendingUp, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { createNotification } from "@/lib/firebase/notifications";
 
 const PLANS = [
   { id: "basic", name: "Basic Plan", roi: 25, min: 100, max: 499, durationDays: 7, tag: "Starter" },
@@ -100,6 +101,15 @@ export default function InvestPage() {
       });
 
       await batch.commit();
+
+      // Trigger real-time notification
+      await createNotification({
+        userId: user.uid,
+        title: "Investment Plan Activated",
+        message: `You successfully allocated $${investAmount.toLocaleString()} to ${selectedPlan.name} (+${selectedPlan.roi}% ROI). Returns will mature in ${selectedPlan.durationDays} days.`,
+        type: "investment",
+        link: "/dashboard/investments",
+      });
 
       setSuccess(true);
       setTimeout(() => {

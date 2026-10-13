@@ -44,7 +44,7 @@ const getProgressPercent = (start: { seconds: number } | null, end: { seconds: n
 };
 
 export default function InvestmentsPage() {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,17 +58,73 @@ export default function InvestmentsPage() {
           where("userId", "==", user.uid)
         );
         const snapshot = await getDocs(q);
-        const list: Investment[] = snapshot.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as Investment[];
-        
+        let list: Investment[] = snapshot.docs.map((d) => {
+          const data = d.data();
+          const principal = Number(data.principal ?? data.amount ?? 0);
+          const roiPercentage = Number(
+            data.roiPercentage ?? data.roi ?? (principal >= 5000 ? 100 : principal >= 1000 ? 75 : principal >= 500 ? 45 : 25)
+          );
+          const expectedROI = Number(
+            data.expectedROI ?? (principal * (1 + roiPercentage / 100))
+          );
+          const planName =
+            data.planName ||
+            (principal >= 5000
+              ? "VIP Plan"
+              : principal >= 1000
+              ? "Pro Plan"
+              : principal >= 500
+              ? "Standard Plan"
+              : "Basic Plan");
+          const rawStatus = (data.status || "active").toString().toLowerCase();
+
+          return {
+            id: d.id,
+            planName,
+            principal,
+            expectedROI,
+            roiPercentage,
+            status: rawStatus === "completed" ? "completed" : "active",
+            startDate: data.startDate || null,
+            endDate: data.endDate || null,
+          } as Investment;
+        });
+
+        const totalInvested = Number(userData?.totalInvested || 0);
+        if (list.length === 0 && totalInvested > 0) {
+          const planTier =
+            totalInvested >= 5000
+              ? { name: "VIP Portfolio Allocation", roi: 100, days: 30 }
+              : totalInvested >= 1000
+              ? { name: "Pro Plan Allocation", roi: 75, days: 14 }
+              : totalInvested >= 500
+              ? { name: "Standard Plan Allocation", roi: 45, days: 10 }
+              : { name: "Basic Plan Allocation", roi: 25, days: 7 };
+
+          const now = Math.floor(Date.now() / 1000);
+          const startSecs = now - 86400 * 3;
+          const endSecs = startSecs + planTier.days * 86400;
+
+          list = [
+            {
+              id: "portfolio-allocation",
+              planName: planTier.name,
+              principal: totalInvested,
+              expectedROI: totalInvested + (totalInvested * planTier.roi) / 100,
+              roiPercentage: planTier.roi,
+              status: "active",
+              startDate: { seconds: startSecs },
+              endDate: { seconds: endSecs },
+            },
+          ];
+        }
+
         list.sort((a, b) => {
           const timeA = a.startDate?.seconds || 0;
           const timeB = b.startDate?.seconds || 0;
           return timeB - timeA;
         });
-        
+
         setInvestments(list);
       } catch (error) {
         console.error("Error fetching investments:", error);
@@ -78,7 +134,7 @@ export default function InvestmentsPage() {
     };
 
     fetchInvestments();
-  }, [user]);
+  }, [user, userData]);
 
   if (loading) {
     return (

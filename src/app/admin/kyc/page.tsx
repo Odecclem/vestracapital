@@ -5,6 +5,7 @@ import { db } from "@/lib/firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, orderBy } from "firebase/firestore";
 import { ShieldCheck, Loader2, CheckCircle2, XCircle, FileImage } from "lucide-react";
 import Image from "next/image";
+import { createNotification } from "@/lib/firebase/notifications";
 
 interface KycSubmission {
   id: string;
@@ -60,6 +61,26 @@ export default function AdminKycPage() {
       await updateDoc(doc(db, "users", userId), {
         kycStatus: action
       });
+
+      // Send notification to user
+      if (action === "verified") {
+        await createNotification({
+          userId,
+          title: "KYC Verified Successfully",
+          message: "Congratulations! Your identity documents have been approved. Your account is now fully verified.",
+          type: "kyc",
+          link: "/dashboard/profile",
+        });
+      } else {
+        await createNotification({
+          userId,
+          title: "KYC Verification Rejected",
+          message: "Your identity documents could not be verified. Please re-upload clear photos of your valid identification.",
+          type: "kyc",
+          link: "/dashboard/profile",
+        });
+      }
+
       setSubmissions(submissions.filter(s => s.id !== userId));
     } catch (error) {
       console.error(`Error updating KYC to ${action}:`, error);

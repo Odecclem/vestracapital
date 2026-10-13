@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { Menu, Bell, User as UserIcon, ShieldCheck, LogOut } from "lucide-react";
+import { Menu, User as UserIcon, ShieldCheck, LogOut } from "lucide-react";
+import NotificationDropdown from "./NotificationDropdown";
 import { useRouter } from "next/navigation";
 
 interface DashboardTopbarProps {
@@ -38,11 +39,8 @@ export default function DashboardTopbar({ onMenuClick }: DashboardTopbarProps) {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
-        {/* Notification bell */}
-        <button className="relative p-2 text-[#6b7280] hover:text-[#1d4ed8] hover:bg-[#f8fafc] rounded-lg transition-colors">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+        {/* Notification dropdown */}
+        <NotificationDropdown />
 
         {/* Divider */}
         <div className="w-px h-8 bg-[#e5e7eb]" />

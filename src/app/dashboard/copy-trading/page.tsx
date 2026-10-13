@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase/config";
-import { doc, getDoc, collection, addDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, serverTimestamp, updateDoc, increment } from "firebase/firestore";
 import { Copy, Loader2, TrendingUp, Users, ShieldAlert, CheckCircle2 } from "lucide-react";
 import Toast from "@/components/ui/Toast";
+import { createNotification } from "@/lib/firebase/notifications";
 
 const TRADERS = [
   {
@@ -115,23 +116,42 @@ export default function CopyTradingPage() {
     try {
       setLoading(true);
       
-      // Deduct balance
+      // Deduct balance and increment totalInvested
       const newBalance = balance - amount;
       await updateDoc(doc(db, "users", user.uid), {
         walletBalance: newBalance,
+        totalInvested: increment(amount),
       });
       setBalance(newBalance);
 
-      // Add copy trading investment record
+      const winRateNum = parseFloat(selectedTrader.winRate) || 85;
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(startDate.getDate() + 30);
+
+      // Add copy trading investment record with both principal & amount for compatibility
       await addDoc(collection(db, "investments"), {
         userId: user.uid,
-        userEmail: user.email,
-        planName: `Copy Trader: ${selectedTrader.name}`,
+        userEmail: user.email || "",
+        planName: `Copy Trading: ${selectedTrader.name}`,
+        principal: amount,
         amount: amount,
-        roi: selectedTrader.winRate,
-        duration: "Ongoing",
+        roiPercentage: winRateNum,
+        expectedROI: amount + (amount * (winRateNum / 100)),
+        duration: "30 Days",
         status: "active",
+        startDate: startDate,
+        endDate: endDate,
         createdAt: serverTimestamp(),
+      });
+
+      // Send notification
+      await createNotification({
+        userId: user.uid,
+        title: "Copy Trading Activated",
+        message: `You started copying trader ${selectedTrader.name} with an allocation of $${amount.toLocaleString()}.`,
+        type: "investment",
+        link: "/dashboard/investments",
       });
 
       setToast({

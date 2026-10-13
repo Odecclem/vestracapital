@@ -5,6 +5,7 @@ import { db } from "@/lib/firebase/config";
 import { collection, getDocs, doc, query, where, orderBy, writeBatch, increment } from "firebase/firestore";
 import { ArrowUpFromLine, Loader2, Check, X as XIcon } from "lucide-react";
 import Toast, { ToastState } from "@/components/ui/Toast";
+import { createNotification } from "@/lib/firebase/notifications";
 
 interface TransactionData {
   id: string;
@@ -76,6 +77,15 @@ export default function PendingWithdrawalsPage() {
       });
       
       await batch.commit();
+
+      // Send notification to user
+      await createNotification({
+        userId: tx.userId,
+        title: "Withdrawal Approved",
+        message: `Your withdrawal request of $${tx.amount.toLocaleString()} has been approved and processed.`,
+        type: "withdrawal",
+        link: "/dashboard/transactions",
+      });
       
       // Remove from list
       setWithdrawals(withdrawals.filter(d => d.id !== tx.id));
@@ -101,6 +111,15 @@ export default function PendingWithdrawalsPage() {
       batch.update(txRef, { status: "rejected" });
       
       await batch.commit();
+
+      // Send notification to user
+      await createNotification({
+        userId: tx.userId,
+        title: "Withdrawal Rejected",
+        message: `Your withdrawal request of $${tx.amount.toLocaleString()} was rejected. Please contact support.`,
+        type: "withdrawal",
+        link: "/dashboard/transactions",
+      });
       
       // Remove from list
       setWithdrawals(withdrawals.filter(d => d.id !== tx.id));
