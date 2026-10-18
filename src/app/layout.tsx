@@ -14,6 +14,7 @@ const inter = Inter({
 
 import { AuthProvider } from "@/contexts/AuthContext";
 import TawkToScript from "@/components/layout/TawkToScript";
+import SupportChatbot from "@/components/ui/SupportChatbot";
 
 export const metadata: Metadata = {
   title: "Vestra Capital - Invest Smart. Grow Wealth.",
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           {children}
+          <SupportChatbot />
           <TawkToScript />
         </AuthProvider>
       </body>

@@ -77,5 +77,18 @@ service cloud.firestore {
       allow create: if isAuth();
       allow update, delete: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
     }
+
+    // Support tickets collection
+    match /support_tickets/{ticketId} {
+      allow create: if true;
+      allow read: if isAdmin() || (isAuth() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // Contact messages collection
+    match /contact_messages/{messageId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
   }
 }

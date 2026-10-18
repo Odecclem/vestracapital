@@ -59,6 +59,11 @@ export default function Footer() {
                   FAQs
                 </Link>
               </li>
+              <li>
+                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors duration-200">
+                  Contact Us
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -109,8 +114,8 @@ export default function Footer() {
               </li>
               <li className="flex items-center">
                 <Mail className="h-5 w-5 text-[#3b82f6] mr-3 shrink-0" />
-                <a href="mailto:support@vestracapital.com" className="text-gray-400 hover:text-white transition-colors duration-200">
-                  support@vestracapital.com
+                <a href="mailto:support@vestracapital.online" className="text-gray-400 hover:text-white transition-colors duration-200">
+                  support@vestracapital.online
                 </a>
               </li>
             </ul>
