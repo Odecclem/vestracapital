@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import Logo from "@/components/ui/Logo";
 import {
   LayoutDashboard,
   ArrowDownToLine,
@@ -72,13 +73,11 @@ export default function DashboardSidebar({ isOpen, onClose }: DashboardSidebarPr
         }`}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-6 border-b border-[#e5e7eb]">
-          <Link href="/" className="text-xl font-bold tracking-tight text-[#0a0a0a]">
-            Vestra Capital
-          </Link>
+        <div className="flex items-center justify-between h-20 px-5 border-b border-[#e5e7eb]">
+          <Logo size="sm" variant="horizontal" />
           <button
             onClick={onClose}
-            className="lg:hidden text-[#6b7280] hover:text-[#0a0a0a] p-1"
+            className="lg:hidden text-[#6b7280] hover:text-[#0a0a0a] p-1 ml-2"
           >
             <X className="h-5 w-5" />
           </button>

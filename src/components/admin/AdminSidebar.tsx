@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import Logo from "@/components/ui/Logo";
 import {
   LayoutDashboard,
   Users,
@@ -68,13 +69,11 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         }`}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-800 bg-gray-950">
-          <Link href="/admin" className="text-xl font-bold tracking-tight text-white">
-            Vestra Admin
-          </Link>
+        <div className="flex items-center justify-between h-20 px-5 border-b border-gray-800 bg-gray-950">
+          <Logo size="sm" variant="horizontal" dark href="/admin" />
           <button
             onClick={onClose}
-            className="lg:hidden text-gray-400 hover:text-white p-1 transition-colors"
+            className="lg:hidden text-gray-400 hover:text-white p-1 transition-colors ml-2"
           >
             <X className="h-5 w-5" />
           </button>

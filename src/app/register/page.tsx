@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, AlertCircle } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 
 function RegisterForm() {
   const [fullName, setFullName] = useState("");
@@ -189,10 +190,10 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link href="/" className="flex justify-center text-3xl font-bold tracking-tight text-[#0a0a0a]">
-          Vestra Capital
-        </Link>
-        <h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-[#0a0a0a]">
+        <div className="flex justify-center mb-4">
+          <Logo variant="full" size="md" />
+        </div>
+        <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-[#0a0a0a]">
           Create a new account
         </h2>
         <p className="mt-2 text-center text-sm text-[#6b7280]">

@@ -368,8 +368,8 @@ export default function SupportChatbot() {
                 setShowTeaser(false);
               }}
             >
-              <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-sm">
-                <Bot className="h-5 w-5" />
+              <div className="w-9 h-9 rounded-xl overflow-hidden shadow-sm shrink-0 border border-amber-400/30 bg-[#0B132B] p-0.5">
+                <img src="/logo-icon.png" alt="Vestra Capital" className="w-full h-full object-contain" />
               </div>
               <div className="flex-1 text-left">
                 <div className="flex items-center gap-1.5 mb-0.5">
@@ -440,10 +440,10 @@ export default function SupportChatbot() {
             <div className="bg-gradient-to-r from-[#0a0a0a] via-[#111827] to-[#1e293b] text-white px-4 py-3.5 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white ring-2 ring-blue-400/30">
-                    <Bot className="h-5 w-5" />
+                  <div className="w-9 h-9 rounded-xl overflow-hidden border border-amber-400/40 shadow-sm shrink-0 bg-[#0B132B] p-0.5">
+                    <img src="/logo-icon.png" alt="Vestra Capital" className="w-full h-full object-contain" />
                   </div>
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0a0a0a]" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0a0a0a]" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">

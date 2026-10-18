@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Menu, X, LogOut, LayoutDashboard, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import Logo from "@/components/ui/Logo";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,9 +35,7 @@ export default function Navbar() {
         <div className="flex justify-between h-20 items-center">
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
-            <Link href="/" className="text-2xl font-bold tracking-tight text-[#0a0a0a]">
-              Vestra Capital
-            </Link>
+            <Logo size="md" variant="horizontal" />
           </div>
 
           {/* Desktop Navigation */}

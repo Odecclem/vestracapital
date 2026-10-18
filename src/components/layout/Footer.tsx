@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mail, MapPin, Phone, ShieldCheck } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -13,9 +14,9 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           {/* Company Info */}
           <div>
-            <Link href="/" className="text-2xl font-bold tracking-tight text-white inline-block mb-6">
-              Vestra Capital
-            </Link>
+            <div className="mb-6">
+              <Logo variant="full" size="md" dark />
+            </div>
             <p className="text-gray-400 leading-relaxed mb-6">
               Empowering global investors with secure, intelligent, and profitable cryptocurrency portfolio management.
             </p>

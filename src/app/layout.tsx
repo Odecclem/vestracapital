@@ -19,6 +19,11 @@ import SupportChatbot from "@/components/ui/SupportChatbot";
 export const metadata: Metadata = {
   title: "Vestra Capital - Invest Smart. Grow Wealth.",
   description: "Production-ready cryptocurrency investment platform.",
+  icons: {
+    icon: "/logo-icon.png",
+    shortcut: "/logo-icon.png",
+    apple: "/logo-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

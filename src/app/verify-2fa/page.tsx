@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase/config";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { KeyRound, Loader2, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import Logo from "@/components/ui/Logo";
 
 export default function Verify2FAPage() {
   const { user, userData, loading, is2faVerified, setIs2faVerified } = useAuth();
@@ -117,10 +118,10 @@ export default function Verify2FAPage() {
   return (
     <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-[#f8fafc]">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link href="/" className="flex justify-center text-2xl font-bold text-[#1d4ed8]">
-          Vestra Capital
-        </Link>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-[#0a0a0a] flex justify-center items-center gap-2">
+        <div className="flex justify-center mb-4">
+          <Logo variant="full" size="md" />
+        </div>
+        <h2 className="mt-2 text-center text-3xl font-extrabold text-[#0a0a0a] flex justify-center items-center gap-2">
           <KeyRound className="h-8 w-8 text-blue-600" />
           Two-Factor Auth
         </h2>

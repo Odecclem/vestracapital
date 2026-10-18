@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Mail, CheckCircle2, AlertCircle, Loader2, ArrowRight, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import Logo from "@/components/ui/Logo";
 
 export default function VerifyEmailPage() {
   const { user, sendVerificationEmail, reloadUser } = useAuth();
@@ -55,9 +56,9 @@ export default function VerifyEmailPage() {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <Link href="/" className="inline-block text-3xl font-bold tracking-tight text-[#0a0a0a]">
-          Vestra Capital
-        </Link>
+        <div className="flex justify-center mb-4">
+          <Logo variant="full" size="md" />
+        </div>
         <div className="mt-6 flex justify-center">
           <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
             <Mail className="h-8 w-8" />

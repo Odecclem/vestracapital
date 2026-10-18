@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -71,10 +72,10 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link href="/" className="flex justify-center text-3xl font-bold tracking-tight text-[#0a0a0a]">
-          Vestra Capital
-        </Link>
-        <h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-[#0a0a0a]">
+        <div className="flex justify-center mb-4">
+          <Logo variant="full" size="md" />
+        </div>
+        <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-[#0a0a0a]">
           Sign in to your account
         </h2>
         <p className="mt-2 text-center text-sm text-[#6b7280]">
