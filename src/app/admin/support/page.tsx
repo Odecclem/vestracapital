@@ -25,14 +25,11 @@ import {
 import { db } from "@/lib/firebase/config";
 import {
   collection,
-  query,
-  orderBy,
   onSnapshot,
   doc,
   addDoc,
   updateDoc,
   serverTimestamp,
-  getDocs,
 } from "firebase/firestore";
 import Link from "next/link";
 
@@ -112,20 +109,29 @@ export default function AdminSupportPage() {
 
   // 1. Subscribe to Live Chat Sessions
   useEffect(() => {
-    const sessionsQuery = query(collection(db, "chat_sessions"), orderBy("updatedAt", "desc"));
     const unsubscribe = onSnapshot(
-      sessionsQuery,
+      collection(db, "chat_sessions"),
       (snapshot) => {
         const list: ChatSession[] = snapshot.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         })) as ChatSession[];
+
+        // In-memory sort by updatedAt descending
+        list.sort((a, b) => {
+          const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : 0);
+          const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : 0);
+          return tB - tA;
+        });
+
         setSessions(list);
 
-        // Auto-select first session if none selected
-        if (!selectedSessionId && list.length > 0) {
-          setSelectedSessionId(list[0].id);
-        }
+        // Auto-select first session if none selected or if previously selected is missing
+        setSelectedSessionId((prev) => {
+          if (!prev && list.length > 0) return list[0].id;
+          if (prev && !list.some((s) => s.id === prev) && list.length > 0) return list[0].id;
+          return prev;
+        });
       },
       (error) => {
         console.warn("Live chat sessions listener fallback:", error);
@@ -133,7 +139,7 @@ export default function AdminSupportPage() {
     );
 
     return () => unsubscribe();
-  }, [selectedSessionId]);
+  }, []);
 
   // 2. Subscribe to Messages of Selected Session
   useEffect(() => {
@@ -142,18 +148,21 @@ export default function AdminSupportPage() {
       return;
     }
 
-    const messagesQuery = query(
-      collection(db, "chat_sessions", selectedSessionId, "messages"),
-      orderBy("createdAt", "asc")
-    );
-
     const unsubscribe = onSnapshot(
-      messagesQuery,
+      collection(db, "chat_sessions", selectedSessionId, "messages"),
       (snapshot) => {
         const list: ChatMessage[] = snapshot.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         })) as ChatMessage[];
+
+        // In-memory sort by createdAt ascending
+        list.sort((a, b) => {
+          const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+          const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+          return tA - tB;
+        });
+
         setMessages(list);
 
         // Mark as read by admin
@@ -176,27 +185,49 @@ export default function AdminSupportPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 3. Fetch Tickets and Contact Inquiries
+  // 3. Real-Time Tickets and Contact Inquiries
   useEffect(() => {
-    const fetchExtras = async () => {
-      setLoadingExtras(true);
-      try {
-        const tSnap = await getDocs(collection(db, "support_tickets"));
-        const tList = tSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as SupportTicket[];
-        setTickets(tList);
+    setLoadingExtras(true);
 
-        const cSnap = await getDocs(collection(db, "contact_messages"));
-        const cList = cSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as ContactMessage[];
-        setContactMessages(cList);
-      } catch (err) {
-        console.warn("Error fetching tickets or contact messages:", err);
-      } finally {
+    const unsubTickets = onSnapshot(
+      collection(db, "support_tickets"),
+      (snap) => {
+        const tList = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as SupportTicket[];
+        tList.sort((a, b) => {
+          const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+          const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+          return tB - tA;
+        });
+        setTickets(tList);
+        setLoadingExtras(false);
+      },
+      (err) => {
+        console.warn("Tickets listener fallback:", err);
         setLoadingExtras(false);
       }
-    };
+    );
 
-    fetchExtras();
-  }, [activeTab]);
+    const unsubContact = onSnapshot(
+      collection(db, "contact_messages"),
+      (snap) => {
+        const cList = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ContactMessage[];
+        cList.sort((a, b) => {
+          const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+          const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+          return tB - tA;
+        });
+        setContactMessages(cList);
+      },
+      (err) => {
+        console.warn("Contact messages listener fallback:", err);
+      }
+    );
+
+    return () => {
+      unsubTickets();
+      unsubContact();
+    };
+  }, []);
 
   const selectedSession = sessions.find((s) => s.id === selectedSessionId);
 

@@ -19,7 +19,6 @@ import {
   TrendingUp,
   CreditCard,
   ArrowRight,
-  MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,8 +31,6 @@ import {
   setDoc,
   updateDoc,
   onSnapshot,
-  query,
-  orderBy,
   increment,
 } from "firebase/firestore";
 
@@ -121,31 +118,52 @@ export default function SupportChatbot() {
     });
 
     // B. Listen to real-time chat messages
-    const q = query(
+    const unsubMessages = onSnapshot(
       collection(db, "chat_sessions", sessionId, "messages"),
-      orderBy("createdAt", "asc")
-    );
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: (ChatMessage & { _rawCreated?: any })[] = snapshot.docs.map((d) => {
+            const data = d.data();
+            let time = "Just now";
+            if (data.createdAt?.toDate) {
+              time = data.createdAt.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            }
+            return {
+              id: d.id,
+              sender: data.sender || "bot",
+              senderName: data.senderName,
+              text: data.text || "",
+              timestamp: time,
+              action: data.action,
+              _rawCreated: data.createdAt,
+            };
+          });
 
-    const unsubMessages = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const list: ChatMessage[] = snapshot.docs.map((d) => {
-          const data = d.data();
-          let time = "Just now";
-          if (data.createdAt?.toDate) {
-            time = data.createdAt.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          // Sort by creation time safely in memory
+          list.sort((a, b) => {
+            const tA = a._rawCreated?.toMillis ? a._rawCreated.toMillis() : (a._rawCreated?.seconds ? a._rawCreated.seconds * 1000 : 0);
+            const tB = b._rawCreated?.toMillis ? b._rawCreated.toMillis() : (b._rawCreated?.seconds ? b._rawCreated.seconds * 1000 : 0);
+            return tA - tB;
+          });
+
+          // Always ensure the initial concierge greeting remains at the top
+          const hasWelcome = list.some((m) => m.sender === "bot" && m.text.includes("Welcome to Vestra"));
+          if (!hasWelcome) {
+            list.unshift({
+              id: "welcome-1",
+              sender: "bot",
+              text: "👋 Welcome to Vestra Capital! I am your 24/7 AI Investment Concierge. How can I assist you with your portfolio, deposits, or trading today?",
+              timestamp: "Just now",
+            });
           }
-          return {
-            id: d.id,
-            sender: data.sender || "bot",
-            senderName: data.senderName,
-            text: data.text || "",
-            timestamp: time,
-            action: data.action,
-          };
-        });
-        setMessages(list);
+
+          setMessages(list);
+        }
+      },
+      (err) => {
+        console.warn("Messages snapshot warning:", err);
       }
-    });
+    );
 
     return () => {
       unsubSession();
@@ -327,10 +345,8 @@ export default function SupportChatbot() {
     ) {
       return {
         text: `Our Live Institutional Support Desk is active right now!\n\n` +
-          `• A desk manager can reply to you directly in this chat room.\n` +
-          `• You can also switch to the **Leave Ticket / Agent** tab or reach us directly at:\n\n` +
-          `✉️ **Official Support**: support@vestracapital.online\n` +
-          `📞 **VIP Client Desk**: +1 (212) 555-0198`,
+          `• Desk managers monitor this chat live and can reply directly in this conversation.\n` +
+          `• You can also switch to the **Leave Ticket / Agent** tab above to submit a priority request directly to our team.`,
         action: {
           label: "Submit Priority Ticket",
           onAction: () => setActiveTab("ticket"),
@@ -898,29 +914,18 @@ export default function SupportChatbot() {
                       </form>
                     )}
 
-                    {/* Direct Social Messengers */}
-                    <div className="mt-4 pt-3 border-t border-gray-100">
-                      <p className="text-[10px] text-gray-500 font-medium text-center mb-2">
-                        Need instant personal messaging?
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <a
-                          href="https://wa.me/12125550198"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-semibold transition-colors"
-                        >
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          <span>WhatsApp Desk</span>
-                        </a>
-                        <a
-                          href="mailto:support@vestracapital.online"
-                          className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold transition-colors"
-                        >
-                          <Headset className="h-3.5 w-3.5" />
-                          <span>Email Support</span>
-                        </a>
+                    {/* Live Desk Notice */}
+                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+                      <div className="flex items-center gap-1.5">
+                        <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                        <span>Direct 256-bit encrypted institutional desk</span>
                       </div>
+                      <button
+                        onClick={() => setActiveTab("chat")}
+                        className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                      >
+                        Back to Live Chat
+                      </button>
                     </div>
                   </div>
                 )}

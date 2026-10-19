@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, MapPin, Phone, ShieldCheck } from "lucide-react";
+import { MapPin, ShieldCheck, Headset } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 
 export default function Footer() {
@@ -108,16 +108,16 @@ export default function Footer() {
                 </span>
               </li>
               <li className="flex items-center">
-                <Phone className="h-5 w-5 text-[#3b82f6] mr-3 shrink-0" />
-                <a href="tel:+12125550198" className="text-gray-400 hover:text-white transition-colors duration-200">
-                  +1 (212) 555-0198
-                </a>
+                <Headset className="h-5 w-5 text-[#3b82f6] mr-3 shrink-0" />
+                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors duration-200">
+                  24/7 Live Support Desk
+                </Link>
               </li>
               <li className="flex items-center">
-                <Mail className="h-5 w-5 text-[#3b82f6] mr-3 shrink-0" />
-                <a href="mailto:support@vestracapital.online" className="text-gray-400 hover:text-white transition-colors duration-200">
-                  support@vestracapital.online
-                </a>
+                <ShieldCheck className="h-5 w-5 text-[#3b82f6] mr-3 shrink-0" />
+                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors duration-200">
+                  Submit Institutional Ticket
+                </Link>
               </li>
             </ul>
           </div>

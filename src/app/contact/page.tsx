@@ -4,15 +4,12 @@ import { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import {
-  Mail,
-  Phone,
   MapPin,
   Clock,
   ShieldCheck,
   Send,
   CheckCircle2,
   Bot,
-  MessageCircle,
   Building,
   Headset,
   ArrowRight,
@@ -127,24 +124,20 @@ export default function ContactPage() {
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-700 mb-4 border border-blue-100">
-                  <Mail className="h-6 w-6" />
+                  <Headset className="h-6 w-6" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Official Support Desk</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">Direct Live Support Desk</h3>
                 <p className="text-gray-500 text-sm leading-relaxed mb-4">
-                  For formal inquiries, account verification, and transaction verifications.
+                  For formal inquiries, account verification, and urgent deposit/withdrawal tracking.
                 </p>
                 <div className="space-y-2 text-sm text-gray-700 font-medium">
                   <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-blue-600" />
-                    <a href="mailto:support@vestracapital.online" className="hover:text-blue-600 transition-colors">
-                      support@vestracapital.online
-                    </a>
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    <span>Real-time Senior Manager Chat</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-blue-600" />
-                    <a href="tel:+12125550198" className="hover:text-blue-600 transition-colors">
-                      +1 (212) 555-0198 (Desk)
-                    </a>
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span>Instant On-Site Ticket Resolution</span>
                   </div>
                 </div>
               </div>
@@ -331,31 +324,29 @@ export default function ContactPage() {
 
             {/* Right 5 Columns: Direct Channels & Fast FAQs */}
             <div className="lg:col-span-5 space-y-6">
-              {/* Instant Social Messenger Box */}
+              {/* Instant Support Box */}
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                 <h3 className="font-bold text-gray-900 text-base mb-2">Need an Instant Direct Reply?</h3>
                 <p className="text-gray-500 text-sm mb-4">
-                  For immediate communication during active trading sessions, connect with our concierge directly on WhatsApp or Telegram:
+                  Connect immediately with our automated AI Concierge or chat live with an active desk manager:
                 </p>
 
                 <div className="space-y-3">
-                  <a
-                    href="https://wa.me/12125550198"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 transition-colors group"
+                  <button
+                    onClick={() => openAIChatbot("I would like to speak to a human support agent")}
+                    className="w-full flex items-center justify-between p-3.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 transition-colors group text-left"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-                        <MessageCircle className="h-5 w-5" />
+                      <div className="w-10 h-10 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-xs">
+                        <Headset className="h-5 w-5" />
                       </div>
                       <div>
-                        <div className="font-bold text-sm">WhatsApp Client Desk</div>
-                        <div className="text-xs text-emerald-700">Official encrypted concierge line</div>
+                        <div className="font-bold text-sm">Live Desk Specialist</div>
+                        <div className="text-xs text-amber-700">Real-time human chat on site</div>
                       </div>
                     </div>
                     <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-                  </a>
+                  </button>
 
                   <button
                     onClick={() => openAIChatbot("I need help with my account")}
