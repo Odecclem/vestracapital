@@ -15,10 +15,12 @@ import {
   X,
   Network,
   ShieldCheck,
+  MessageSquare,
 } from "lucide-react";
 
 const navItems = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
+  { name: "Live Support & Chat", href: "/admin/support", icon: MessageSquare },
   { name: "Manage Users", href: "/admin/users", icon: Users },
   { name: "Referrals", href: "/admin/referrals", icon: Network },
   { name: "KYC Verification", href: "/admin/kyc", icon: ShieldCheck },

@@ -24,11 +24,23 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase/config";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  doc,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  increment,
+} from "firebase/firestore";
 
 interface ChatMessage {
   id: string;
-  sender: "bot" | "user";
+  sender: "bot" | "user" | "admin";
+  senderName?: string;
   text: string;
   timestamp: string;
   action?: {
@@ -54,6 +66,10 @@ export default function SupportChatbot() {
   const [activeTab, setActiveTab] = useState<"chat" | "ticket">("chat");
   const [showTeaser, setShowTeaser] = useState(true);
 
+  // Persistent Session & Mode
+  const [sessionId, setSessionId] = useState<string>("");
+  const [sessionMode, setSessionMode] = useState<"ai" | "human_takeover">("ai");
+
   // Chat State
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -76,6 +92,66 @@ export default function SupportChatbot() {
   const [ticketSuccessId, setTicketSuccessId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 1. Initialize Persistent Session ID in localStorage
+  useEffect(() => {
+    let sid = "";
+    try {
+      sid = localStorage.getItem("vestra_chat_session_id") || "";
+      if (!sid) {
+        sid = "sess_" + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem("vestra_chat_session_id", sid);
+      }
+    } catch (_) {
+      sid = "sess_" + Math.random().toString(36).substring(2, 10);
+    }
+    setSessionId(sid);
+  }, []);
+
+  // 2. Real-Time Firestore Subscription (Session Mode + Messages)
+  useEffect(() => {
+    if (!sessionId) return;
+
+    // A. Listen to session mode changes (whether admin has taken over)
+    const unsubSession = onSnapshot(doc(db, "chat_sessions", sessionId), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.mode) setSessionMode(data.mode);
+      }
+    });
+
+    // B. Listen to real-time chat messages
+    const q = query(
+      collection(db, "chat_sessions", sessionId, "messages"),
+      orderBy("createdAt", "asc")
+    );
+
+    const unsubMessages = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const list: ChatMessage[] = snapshot.docs.map((d) => {
+          const data = d.data();
+          let time = "Just now";
+          if (data.createdAt?.toDate) {
+            time = data.createdAt.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          }
+          return {
+            id: d.id,
+            sender: data.sender || "bot",
+            senderName: data.senderName,
+            text: data.text || "",
+            timestamp: time,
+            action: data.action,
+          };
+        });
+        setMessages(list);
+      }
+    });
+
+    return () => {
+      unsubSession();
+      unsubMessages();
+    };
+  }, [sessionId]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -104,7 +180,7 @@ export default function SupportChatbot() {
 
     window.addEventListener("open-vestra-chat", handleOpenChat);
     return () => window.removeEventListener("open-vestra-chat", handleOpenChat);
-  }, []);
+  }, [sessionId, sessionMode]);
 
   const getBotResponse = (query: string): { text: string; action?: { label: string; href?: string; onAction?: () => void } } => {
     const lower = query.toLowerCase();
@@ -250,11 +326,11 @@ export default function SupportChatbot() {
       lower.includes("help")
     ) {
       return {
-        text: `Our Institutional Support Desk is on standby 24/7/365:\n\n` +
+        text: `Our Live Institutional Support Desk is active right now!\n\n` +
+          `• A desk manager can reply to you directly in this chat room.\n` +
+          `• You can also switch to the **Leave Ticket / Agent** tab or reach us directly at:\n\n` +
           `✉️ **Official Support**: support@vestracapital.online\n` +
-          `📞 **VIP Client Desk**: +1 (212) 555-0198\n` +
-          `📍 **Headquarters**: 120 Financial District, New York, NY 10005\n\n` +
-          `Would you like to submit a direct inquiry right now? I can forward your message straight to a senior wealth manager.`,
+          `📞 **VIP Client Desk**: +1 (212) 555-0198`,
         action: {
           label: "Submit Priority Ticket",
           onAction: () => setActiveTab("ticket"),
@@ -283,7 +359,7 @@ export default function SupportChatbot() {
         `• **Crypto Deposit Guides (BTC/ETH/USDT/SOL)**\n` +
         `• **Withdrawal Speeds & Policy**\n` +
         `• **Copy Trading Automation**\n\n` +
-        `Or switch to the **Leave Ticket** tab to have a senior desk manager contact you directly.`,
+        `Our support desk also monitors this chat live and can step in to assist you directly.`,
       action: {
         label: "Leave a Ticket for Support",
         onAction: () => setActiveTab("ticket"),
@@ -291,34 +367,88 @@ export default function SupportChatbot() {
     };
   };
 
-  const handleUserSend = (textToSend?: string) => {
+  const handleUserSend = async (textToSend?: string) => {
     const text = (textToSend || inputMessage).trim();
     if (!text) return;
 
+    setInputMessage("");
+    const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    // 1. Optimistic local addition (if offline or delayed)
     const userMsg: ChatMessage = {
       id: "user-" + Date.now(),
       sender: "user",
       text,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: timeStr,
     };
-
     setMessages((prev) => [...prev, userMsg]);
-    setInputMessage("");
-    setIsTyping(true);
 
-    // Realistic typing delay (600ms)
-    setTimeout(() => {
-      const response = getBotResponse(text);
-      const botMsg: ChatMessage = {
-        id: "bot-" + Date.now(),
-        sender: "bot",
-        text: response.text,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        action: response.action,
-      };
-      setMessages((prev) => [...prev, botMsg]);
-      setIsTyping(false);
-    }, 600);
+    // 2. Sync with Firestore Session so Admin sees it in real-time
+    if (sessionId) {
+      try {
+        await setDoc(
+          doc(db, "chat_sessions", sessionId),
+          {
+            id: sessionId,
+            userId: user?.uid || "guest",
+            userName: user?.displayName || "Guest Visitor",
+            userEmail: user?.email || "",
+            lastMessage: text,
+            lastSender: "user",
+            updatedAt: serverTimestamp(),
+            unreadAdminCount: increment(1),
+            status: "active",
+          },
+          { merge: true }
+        );
+
+        await addDoc(collection(db, "chat_sessions", sessionId, "messages"), {
+          sender: "user",
+          senderName: user?.displayName || "Visitor",
+          text,
+          createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn("Firestore message dispatch fallback:", err);
+      }
+    }
+
+    // 3. If in AI mode (human has not taken over), trigger intelligent AI response
+    if (sessionMode !== "human_takeover") {
+      setIsTyping(true);
+
+      setTimeout(async () => {
+        const response = getBotResponse(text);
+        const botMsg: ChatMessage = {
+          id: "bot-" + Date.now(),
+          sender: "bot",
+          text: response.text,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          action: response.action,
+        };
+        setMessages((prev) => [...prev, botMsg]);
+        setIsTyping(false);
+
+        // Also save AI message to Firestore
+        if (sessionId) {
+          try {
+            await addDoc(collection(db, "chat_sessions", sessionId, "messages"), {
+              sender: "bot",
+              senderName: "Vestra AI Concierge",
+              text: response.text,
+              createdAt: serverTimestamp(),
+              action: response.action ? { label: response.action.label, href: response.action.href } : null,
+            });
+
+            await updateDoc(doc(db, "chat_sessions", sessionId), {
+              lastMessage: response.text,
+              lastSender: "bot",
+              updatedAt: serverTimestamp(),
+            });
+          } catch (_) {}
+        }
+      }, 600);
+    }
   };
 
   const handleTicketSubmit = async (e: React.FormEvent) => {
@@ -344,7 +474,6 @@ export default function SupportChatbot() {
       setTicketSuccessId(refCode);
     } catch (err) {
       console.warn("Firestore support_tickets write fallback:", err);
-      // Graceful fallback to guarantee user confidence
       setTicketSuccessId(refCode);
     } finally {
       setTicketSubmitting(false);
@@ -434,7 +563,7 @@ export default function SupportChatbot() {
             }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-22 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-[410px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[99] flex flex-col overflow-hidden"
+            className="fixed bottom-22 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-[420px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[99] flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-[#0a0a0a] via-[#111827] to-[#1e293b] text-white px-4 py-3.5 flex items-center justify-between shrink-0">
@@ -447,14 +576,25 @@ export default function SupportChatbot() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm tracking-tight text-white">Vestra AI Concierge</h3>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded border border-blue-500/30">
-                      24/7 Desk
-                    </span>
+                    <h3 className="font-bold text-sm tracking-tight text-white">Vestra Support Desk</h3>
+                    {sessionMode === "human_takeover" ? (
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Live Agent
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded border border-blue-500/30">
+                        AI Concierge
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] text-gray-400 flex items-center gap-1">
                     <Clock className="h-3 w-3 text-emerald-400" />
-                    <span>Instant replies • Institutional Support</span>
+                    <span>
+                      {sessionMode === "human_takeover"
+                        ? "Specialist connected to chat"
+                        : "Instant AI answers • Real desk monitoring"}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -494,7 +634,7 @@ export default function SupportChatbot() {
                     }`}
                   >
                     <MessageSquare className="h-3.5 w-3.5" />
-                    <span>Live AI Concierge</span>
+                    <span>Live Chat Support</span>
                   </button>
                   <button
                     onClick={() => setActiveTab("ticket")}
@@ -509,9 +649,19 @@ export default function SupportChatbot() {
                   </button>
                 </div>
 
-                {/* Tab Content: Live AI Chat */}
+                {/* Tab Content: Live Chat */}
                 {activeTab === "chat" && (
                   <div className="flex-1 flex flex-col min-h-0 bg-[#fafafa]">
+                    {/* Live Agent Banner when admin takes over */}
+                    {sessionMode === "human_takeover" && (
+                      <div className="bg-emerald-50 border-b border-emerald-100 px-3.5 py-1.5 text-[11px] text-emerald-800 flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-1.5 font-medium">
+                          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                          <span>A senior support manager is chatting with you live.</span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Chat Messages */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs">
                       {messages.map((msg) => (
@@ -521,10 +671,20 @@ export default function SupportChatbot() {
                             msg.sender === "user" ? "items-end" : "items-start"
                           }`}
                         >
+                          {/* Sender Label for Admin messages */}
+                          {msg.sender === "admin" && (
+                            <div className="flex items-center gap-1 text-[10px] text-amber-700 font-bold mb-1 px-1">
+                              <ShieldCheck className="h-3 w-3 text-amber-600" />
+                              <span>{msg.senderName || "Support Desk Specialist"}</span>
+                            </div>
+                          )}
+
                           <div
                             className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm leading-relaxed ${
                               msg.sender === "user"
                                 ? "bg-gradient-to-r from-blue-700 to-indigo-600 text-white rounded-br-none"
+                                : msg.sender === "admin"
+                                ? "bg-gradient-to-r from-[#0B132B] to-[#1C2541] border border-amber-400/40 text-amber-50 rounded-bl-none shadow-md"
                                 : "bg-white border border-gray-200 text-gray-800 rounded-bl-none"
                             }`}
                           >
@@ -600,7 +760,7 @@ export default function SupportChatbot() {
                         type="text"
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
-                        placeholder="Ask about plans, deposits, withdrawals..."
+                        placeholder="Type your message to support..."
                         className="flex-1 bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl px-3 py-2 text-xs text-gray-900 focus:outline-none transition-all placeholder:text-gray-400"
                       />
                       <button
@@ -648,7 +808,7 @@ export default function SupportChatbot() {
                           }}
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl transition-all"
                         >
-                          Return to AI Concierge
+                          Return to Live Chat
                         </button>
                       </div>
                     ) : (
